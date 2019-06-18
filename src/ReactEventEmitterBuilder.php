@@ -110,7 +110,7 @@ class ReactEventEmitterBuilder implements EventEmitterBuilder
             $this->idleThreshold
         );
 
-        $this->loop->futureTick($eventEmitter);
+        $this->loop->addPeriodicTimer(0.003, $eventEmitter);
 
         return $eventEmitter;
     }
