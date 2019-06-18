@@ -43,8 +43,7 @@ class ReactEventEmitterTest extends TestCase
     protected function setUp()
     {
         $this->loopFactory = LoopFactory::create();
-        $this->loop = $this->loopFactory->createSingleRunLoop();
-        $this->builder = ReactEventEmitterBuilder::createWithEventLoop($this->loop);
+        $this->createAlwaysRunningLoopWithTimeout(0.004);
     }
 
     protected function tearDown()
@@ -123,7 +122,7 @@ class ReactEventEmitterTest extends TestCase
         $streamOne->attach($emitter);
         $streamTwo->attach($emitter);
 
-        $this->loop->run();
+        $this->runLoopOnce();
 
         $this->assertEquals(
             StreamObserverNotificationState::createEmpty()
@@ -225,6 +224,8 @@ class ReactEventEmitterTest extends TestCase
     /** @test */
     public function doesNotExecuteIdleWorkerWhenStreamHasDataInReadQueue()
     {
+        $this->createAlwaysRunningLoopWithTimeout(0.03);
+
         $socket = $this->createSocket();
         $stream = $this->createStream($this->createStreamBuffer($socket));
 
@@ -272,10 +273,6 @@ class ReactEventEmitterTest extends TestCase
     {
         $this->createAlwaysRunningLoopWithTimeout(3);
 
-        $this->builder = ReactEventEmitterBuilder::createWithEventLoop(
-            $this->loop
-        );
-
         $socket = $this->createSocket();
         $stream = $this->createStream($this->createStreamBuffer($socket));
 
@@ -300,8 +297,6 @@ class ReactEventEmitterTest extends TestCase
     public function allowsToSpecifyCustomIdleWorkerThreshold()
     {
         $this->createAlwaysRunningLoopWithTimeout(3);
-
-        $this->builder = ReactEventEmitterBuilder::createWithEventLoop($this->loop);
 
         $socket = $this->createSocket();
         $stream = $this->createStream($this->createStreamBuffer($socket));
@@ -338,7 +333,7 @@ class ReactEventEmitterTest extends TestCase
 
         $stream->attach($emitter);
 
-        $this->loop->run();
+        $this->runLoopOnce();
 
         $this->assertEquals(
             StreamObserverNotificationState::createEmpty()
@@ -384,7 +379,7 @@ class ReactEventEmitterTest extends TestCase
         return $socket->wrapSocket([new SocketStreamBufferFactory(), 'createFromSocket']);
     }
 
-    private function createAlwaysRunningLoopWithTimeout(int $timeout): void
+    private function createAlwaysRunningLoopWithTimeout(float $timeout): void
     {
         $this->loop = $this->loopFactory->createConditionRunLoopWithTimeout(
             function () {
@@ -392,5 +387,19 @@ class ReactEventEmitterTest extends TestCase
             },
             $timeout
         );
+
+        $this->builder = ReactEventEmitterBuilder::createWithEventLoop(
+            $this->loop
+        );
+    }
+
+    private function runLoopOnce(): void
+    {
+        $this->loop->futureTick(
+            function () {
+                $this->loop->stop();
+            }
+        );
+        $this->loop->run();
     }
 }

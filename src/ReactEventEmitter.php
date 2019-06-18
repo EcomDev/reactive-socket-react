@@ -97,8 +97,6 @@ class ReactEventEmitter implements EventEmitter
         call_user_func($this->tickWorker);
 
         $this->executeIdleWorkerIfApplicable();
-
-        $this->loop->futureTick($this);
     }
 
     private function moveIdleAnchorForward(): void
